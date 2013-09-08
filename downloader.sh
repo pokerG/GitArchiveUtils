@@ -12,9 +12,9 @@ else
 		do
 			if [ "$day" -lt "10" ]
 			then
-				wget -P "$1" http://data.githubarchive.org/"$year"-"$month"-0"$day"-"$hour".json.gz
+				wget -P "$1" -q http://data.githubarchive.org/"$year"-"$month"-0"$day"-"$hour".json.gz
 			else
-				wget -P "$1" http://data.githubarchive.org/"$year"-"$month"-"$day"-"$hour".json.gz
+				wget -P "$1" -q http://data.githubarchive.org/"$year"-"$month"-"$day"-"$hour".json.gz
 			fi
 		done
 	done
