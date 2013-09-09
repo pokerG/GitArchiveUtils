@@ -11,10 +11,14 @@ def parse_json_str(json_str, indent_num=4, indent_str=' '):
 
 def main():
 	parser = argparse.ArgumentParser()
+
 	parser.add_argument('file', help='sorce file including json string for each line.')
-	parser.add_argument('-n', '--num', help='how much line that be parsed(default all lines).', type=int)
+
+	parser.add_argument('-l', '--line', help='which line to parse.', type=int)
+	parser.add_argument('-n', '--num', help='how much line that be parsed.', type=int)
 	parser.add_argument('-o', '--output', help='where the result be output(default the std out).')
 	args = parser.parse_args()
+	
 	try:
 		json_file = open(args.file)
 	except Exception, e:
@@ -28,11 +32,17 @@ def main():
 	except Exception, e:
 		print 'cant create file in', args.output
 	
-	if args.num:
+	if args.line:
+		# the line is given
+		for i in xrange(args.line - 1):
+			json_file.readline()
+		print parse_json_str(json_file.readline())
+	elif args.num:
+		# the first num lines
 		for i in xrange(args.num):
-			line = parse_json_str(json_file.readline())
-			print line
+			print parse_json_str(json_file.readline())
 	else:
+		# all lines
 		for line in json_file.readlines():
 			line = parse_json_str(line)
 			print line
