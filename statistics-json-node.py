@@ -20,6 +20,8 @@ class StatisticsTimeline(object):
 		for json in self.json_file:
 			self.total_json_nums += 1
 			json_dict = simplejson.loads(json)
+			# if 'repository' not in json_dict:
+			# 	print self.total_json_nums
 			for key in json_dict:
 				if key in self.top_key:
 					self.top_key[key] += 1
