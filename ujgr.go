@@ -1,20 +1,14 @@
 package main
 
-import (
-	//"archive/tar"
+import 
 	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	//"bytes"
-	//"errors"
 	"regexp"
-
 	"time"
-
-	//"strings"
 )
 
 const SIZE int = 20971520

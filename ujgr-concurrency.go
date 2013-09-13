@@ -1,20 +1,16 @@
 package main
 
 import (
-	//"archive/tar"
 	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	//"bytes"
-	//"errors"
 	"regexp"
 	"runtime"
-	"time"
 	"sync"
-	//"strings"
+	"time"
 )
 
 const SIZE int = 20971520
@@ -61,10 +57,10 @@ func Tree(dirname string, curHier int) error {
 				if cnum >= len(chs) {
 					chs = append(chs, make(chan int))
 				}
-	
+
 				chs[cnum] = make(chan int)
 
-				go UTar(filepath.Join(dirAbs, fileInfo.Name()),chs[cnum])
+				go UTar(filepath.Join(dirAbs, fileInfo.Name()), chs[cnum])
 				cnum += 1
 				handleError(err)
 
@@ -76,8 +72,8 @@ func Tree(dirname string, curHier int) error {
 	return nil
 }
 
-func UTar(fpath string,ch chan int) error {
-	
+func UTar(fpath string, ch chan int) error {
+
 	fr, err := os.Open(fpath)
 	handleError(err)
 	defer fr.Close()
