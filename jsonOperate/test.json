@@ -1,0 +1,33 @@
+{
+	"type": "PushEvent",
+	"repo": {
+		"id": 3055800,
+		"url": "https://api.github.dev/repos/knowledge-point/tinypm-backup",
+		"name": "knowledge-point/tinypm-backup"
+	},
+	"created_at": "2012-01-01T00:00:09Z",
+	"payload": {
+		"ref": "refs/heads/master",
+		"push_id": 55756268,
+		"commits": [{
+			"sha": "ad9010cbf0ecfd252c873ea7530342291f3e574b",
+			"author": {
+				"email": "roman.apostol+backup@gmail.com",
+				"name": "Knowledge Point"
+			},
+			"url": "https://api.github.com/repos/knowledge-point/tinypm-backup/commits/ad9010cbf0ecfd252c873ea7530342291f3e574b",
+			"message": "backup at Sun Jan  1 00:00:02 UTC 2012"
+		}],
+		"head": "ad9010cbf0ecfd252c873ea7530342291f3e574b",
+		"size": 1
+	},
+	"actor": {
+		"login": "kp-backup",
+		"id": 1287779,
+		"url": "https://api.github.dev/users/kp-backup",
+		"avatar_url": "https://secure.gravatar.com/avatar/b55e2cae26595d21039ad1bc05db5950?d=http://github.dev%2Fimages%2Fgravatars%2Fgravatar-user-420.png",
+		"gravatar_id": "b55e2cae26595d21039ad1bc05db5950"
+	},
+	"public": true,
+	"id": "1508512236"
+}
