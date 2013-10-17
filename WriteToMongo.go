@@ -16,10 +16,6 @@ import (
 
 const FILESIZE int = 20971520
 
-type Sjson struct {
-	inter interface{}
-}
-
 func main() {
 	if len(os.Args) > 1 {
 
@@ -92,14 +88,22 @@ func WriteToMongo(data []byte) {
 	//fmt.Println(data)
 	session.SetMode(mgo.Monotonic, true)
 
-	var ins Sjson
-
-	err = json.Unmarshal(data, &ins)
+	reg, err := regexp.Compile(`[{].*[}][\n]`)
 	handleError(err)
 
-	c := session.DB("testBig").C("Event")
+	sdata := reg.FindAllString(string(data), -1)
+	fmt.Println(len(sdata))
+	//fmt.Println(sdata)
 
-	err = c.Insert(ins)
+	for _, s := range sdata {
+		var inter interface{}
+
+		err = json.Unmarshal([]byte(s), &inter)
+		handleError(err)
+		c := session.DB("testBig").C("Event")
+		err = c.Insert(inter)
+
+	}
 
 	handleError(err)
 
