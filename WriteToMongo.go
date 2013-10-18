@@ -14,7 +14,7 @@ import (
 	//"labix.org/v2/mgo/bson"
 )
 
-const FILESIZE int = 20971520
+const BUFSIZE int = 40000
 
 func main() {
 	if len(os.Args) > 1 {
@@ -63,12 +63,19 @@ func UZip(fpath string) {
 	gr, err := gzip.NewReader(fr)
 	handleError(err)
 
-	buf := make([]byte, FILESIZE)
+	buf := make([]byte, BUFSIZE)
+
+	var data []byte
 
 	var num int = 0
 
 	for {
-		n, err := gr.Read(buf[num:])
+
+		n, err := gr.Read(buf)
+		//fmt.Println(n)
+		//fmt.Println(buf)
+		data = append(data,buf[:n]...)
+
 		if err == io.EOF {
 			break
 		}
@@ -76,9 +83,7 @@ func UZip(fpath string) {
 		handleError(err)
 	}
 
-	buf = buf[:num]
-
-	WriteToMongo(buf)
+	WriteToMongo(data)
 }
 
 func WriteToMongo(data []byte) {
@@ -100,7 +105,7 @@ func WriteToMongo(data []byte) {
 
 		err = json.Unmarshal([]byte(s), &inter)
 		handleError(err)
-		c := session.DB("testBig").C("Event")
+		c := session.DB("testGoBig").C("Event")
 		err = c.Insert(inter)
 
 	}
