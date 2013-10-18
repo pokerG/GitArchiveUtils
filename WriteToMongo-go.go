@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sync"
 	"time"
-	//"sync"
 	//"labix.org/v2/mgo/bson"
 )
 
@@ -75,7 +75,7 @@ func UZip(fpath string, ch chan int) {
 	handleError(err)
 	defer fr.Close()
 
-	fmt.Println(fr.Name())
+	//fmt.Println(fr.Name())
 
 	gr, err := gzip.NewReader(fr)
 	handleError(err)
@@ -100,10 +100,10 @@ func UZip(fpath string, ch chan int) {
 		handleError(err)
 	}
 
-	WriteToMongo(data, ch)
+	WriteToMongo(fr.Name(), data, ch)
 }
 
-func WriteToMongo(data []byte, ch chan int) {
+func WriteToMongo(fname string, data []byte, ch chan int) {
 	session, err := mgo.Dial("localhost:27017")
 	handleError(err)
 	defer session.Close()
@@ -114,7 +114,7 @@ func WriteToMongo(data []byte, ch chan int) {
 	handleError(err)
 
 	sdata := reg.FindAllString(string(data), -1)
-	fmt.Println(len(sdata))
+
 	//fmt.Println(sdata)
 
 	for _, s := range sdata {
@@ -126,6 +126,13 @@ func WriteToMongo(data []byte, ch chan int) {
 		err = c.Insert(inter)
 
 	}
+
+	lock := &sync.Mutex{}
+	lock.Lock()
+	fmt.Println(fname)
+	fmt.Println(len(sdata))
+	lock.Unlock()
+	runtime.Gosched()
 
 	handleError(err)
 
