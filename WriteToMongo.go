@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"time"
 	//"labix.org/v2/mgo/bson"
 )
@@ -18,7 +19,7 @@ const BUFSIZE int = 40000
 
 func main() {
 	if len(os.Args) > 1 {
-
+		runtime.GOMAXPROCS(runtime.NumCPU())
 		t := time.Now()
 
 		Tree(os.Args[1], 1)
@@ -74,7 +75,7 @@ func UZip(fpath string) {
 		n, err := gr.Read(buf)
 		//fmt.Println(n)
 		//fmt.Println(buf)
-		data = append(data,buf[:n]...)
+		data = append(data, buf[:n]...)
 
 		if err == io.EOF {
 			break

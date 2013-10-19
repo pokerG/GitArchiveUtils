@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 	//"labix.org/v2/mgo/bson"
 )
@@ -20,7 +21,7 @@ const BUFSIZE int = 40000
 
 var chs []chan int
 var cnum int
-var chtmp chan int
+var currentNum int32
 
 func main() {
 	if len(os.Args) > 1 {
@@ -71,6 +72,13 @@ func Tree(dirname string, curHier int) {
 }
 
 func UZip(fpath string, ch chan int) {
+
+	for atomic.LoadInt32(&currentNum) > 5 {
+		time.Sleep(time.Second)
+	}
+
+	atomic.AddInt32(&currentNum, 1)
+
 	fr, err := os.Open(fpath)
 	handleError(err)
 	defer fr.Close()
@@ -132,6 +140,7 @@ func WriteToMongo(fname string, data []byte, ch chan int) {
 	fmt.Println(fname)
 	fmt.Println(len(sdata))
 	lock.Unlock()
+	atomic.AddInt32(&currentNum, -1)
 	runtime.Gosched()
 
 	handleError(err)
