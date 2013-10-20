@@ -92,43 +92,44 @@ func WriteToMongo(data []byte) {
 	//fmt.Println(data)
 	session.SetMode(mgo.Monotonic, true)
 
+	c := session.DB("testGoBig").C("Event")
+
 	reg, err := regexp.Compile(`[{].*[}][\n]`)
 	handleError(err)
 
 	sdata := reg.FindAllString(string(data), -1)
 
-	chs = make([]chan int, len(sdata))
+	chs = make([]chan int, len(sdata)/1000+1)
 
-	for i, s := range sdata {
+	for i, _ := range chs {
 		chs[i] = make(chan int)
-		go func(s string, i int) {
+		go func(s []string, i int) {
 			var inter interface{}
 			//fmt.Println("GOruntine!!", i)
-			err := json.Unmarshal([]byte(s), &inter)
-			handleError(err)
-			c := session.DB("testGoBig").C("Event")
-			err = c.Insert(inter)
-			handleError(err)
+			for _, i := range s {
+				err := json.Unmarshal([]byte(i), &inter)
+				handleError(err)
+				err = c.Insert(inter)
+				handleError(err)
+			}
+
 			chs[i] <- 1
-		}(s, i)
+		}(sdata[i:(i+1)*1000], i)
 		//if i%6000 == 0 {
 		//	time.Sleep(time.Second / 10)
 		//}
 	}
 
-	timeout := make(chan bool)
+	//	timeout := make(chan bool)
 
-	go func() {
-		time.Sleep(time.Second * 10)
-		close(timeout)
+	//go func() {
+	//	time.Sleep(time.Second * 10)
+	//	close(timeout)
 
-	}()
+	//}()
 	for i, ch := range chs {
-		select {
-		case <-ch:
-			fmt.Print(i, ",")
-		case <-timeout:
-		}
+		<-ch
+		fmt.Print(i, ",")
 	}
 
 	fmt.Println(len(sdata))
@@ -138,8 +139,6 @@ func WriteToMongo(data []byte) {
 	fmt.Println("4")
 	fmt.Println("5")
 	fmt.Println("6")
-
-	// can't find the return address !!!!!!!
 
 	defer func() {
 		if r := recover(); r != nil {

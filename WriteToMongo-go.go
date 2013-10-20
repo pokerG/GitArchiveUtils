@@ -11,20 +11,35 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	//"sync"
+	"sync"
 	//"sync/atomic"
 	"time"
 	//"labix.org/v2/mgo/bson"
 )
 
 const BUFSIZE int = 40000
+const CHANNUM int = 48
+
+var chs []chan int
+var cnum int
+
+//var currentNum int32
 
 func main() {
 	if len(os.Args) > 1 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
+
 		t := time.Now()
+
+		chs = make([]chan int, CHANNUM)
+		cnum = 0
+
 		Tree(os.Args[1], 1)
+		//for _, ch := range chs {
+		//	<-ch
+		//}
 		fmt.Println("total time :", time.Since(t))
+
 	} else {
 		fmt.Println("Please input the Dir or file path")
 	}
@@ -37,26 +52,51 @@ func Tree(dirname string, curHier int) {
 	fileInfos, err := ioutil.ReadDir(dirAbs)
 	handleError(err)
 
-	for _, fileInfo := range fileInfos {
+	for i, fileInfo := range fileInfos {
 		if fileInfo.IsDir() {
 			Tree(filepath.Join(dirAbs, fileInfo.Name()), curHier+1)
 		} else {
 			b := []byte(fileInfo.Name())
 			matched, _ := regexp.Match("[.](json.gz)$", b)
 			if matched {
-				UZip(filepath.Join(dirAbs, fileInfo.Name()))
+				//	for atomic.LoadInt32(&currentNum) > 1 {
+				//		time.Sleep(time.Second * 30)
+				//	}
+
+				if cnum == CHANNUM {
+					for _, ch := range chs {
+						<-ch
+					}
+					cnum = 0
+					fmt.Println("One luan")
+				}
+				//if cnum >= len(chs) {
+				//	chs = append(chs, make(chan int))
+				//}
+				chs[cnum] = make(chan int)
+				//atomic.AddInt32(&currentNum, 1)
+				go UZip(filepath.Join(dirAbs, fileInfo.Name()), chs[cnum])
+				if i == len(fileInfos)-1 {
+					for i := 0; i <= cnum; i++ {
+						<-chs[i]
+					}
+					for _, ch := range chs {
+						close(ch)
+					}
+				}
+				cnum += 1
+
 			}
 		}
 	}
 }
 
-func UZip(fpath string) {
-
+func UZip(fpath string, ch chan int) {
 	fr, err := os.Open(fpath)
 	handleError(err)
 	defer fr.Close()
 
-	fmt.Println(fr.Name())
+	//fmt.Println(fr.Name())
 
 	gr, err := gzip.NewReader(fr)
 	handleError(err)
@@ -68,10 +108,12 @@ func UZip(fpath string) {
 	var num int = 0
 
 	for {
+
 		n, err := gr.Read(buf)
 		//fmt.Println(n)
 		//fmt.Println(buf)
 		data = append(data, buf[:n]...)
+
 		if err == io.EOF {
 			break
 		}
@@ -79,10 +121,10 @@ func UZip(fpath string) {
 		handleError(err)
 	}
 
-	WriteToMongo(data)
+	WriteToMongo(fr.Name(), data, ch)
 }
 
-func WriteToMongo(data []byte) {
+func WriteToMongo(fname string, data []byte, ch chan int) {
 	session, err := mgo.Dial("localhost:27017")
 	handleError(err)
 	defer session.Close()
@@ -94,30 +136,26 @@ func WriteToMongo(data []byte) {
 
 	sdata := reg.FindAllString(string(data), -1)
 
-	chs := make([]chan int, len(sdata))
+	//fmt.Println(sdata)
 
-	for i, s := range sdata {
-		chs[i] = make(chan int)
-		go func(s string, i int) {
-			var inter interface{}
-			//fmt.Println("GOruntine!!", i)
-			err := json.Unmarshal([]byte(s), &inter)
-			handleError(err)
-			c := session.DB("testGoBig").C("Event")
-			err = c.Insert(inter)
-			chs[i] <- 1
-		}(s, i)
-		if i%5000 == 0 {
-			time.Sleep(time.Second)
-		}
+	for _, s := range sdata {
+		var inter interface{}
+
+		err = json.Unmarshal([]byte(s), &inter)
+		handleError(err)
+		c := session.DB("testGoBig").C("Event")
+		err = c.Insert(inter)
+
 	}
 
-	for _, ch := range chs {
-		<-ch
-	}
-
+	lock := &sync.Mutex{}
+	lock.Lock()
+	fmt.Println(fname)
 	fmt.Println(len(sdata))
+	//atomic.AddInt32(&currentNum, -1)
 	handleError(err)
+	ch <- 1
+	lock.Unlock()
 }
 
 func handleError(err error) {
