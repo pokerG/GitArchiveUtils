@@ -33,8 +33,10 @@ func main() {
 
 		chs = make([]chan int, CHANNUM)
 		cnum = 0
-
-		Tree(os.Args[1], 1)
+		for i, _ := range chs {
+			chs[i] = make(chan int)
+		}
+		Tree(os.Args[1])
 
 		fmt.Println("total time :", time.Since(t))
 
@@ -44,40 +46,31 @@ func main() {
 
 }
 
-func Tree(dirname string, curHier int) {
+func Tree(dirname string) {
 	dirAbs, err := filepath.Abs(dirname)
 	handleError(err)
 	fileInfos, err := ioutil.ReadDir(dirAbs)
 	handleError(err)
 
 	for i, fileInfo := range fileInfos {
-		if fileInfo.IsDir() {
-			Tree(filepath.Join(dirAbs, fileInfo.Name()), curHier+1)
-		} else {
-			b := []byte(fileInfo.Name())
-			matched, _ := regexp.Match("[.](json.gz)$", b)
-			if matched {
-				if cnum == CHANNUM {
-					for _, ch := range chs {
-						<-ch
-					}
-					cnum = 0
-					fmt.Println("One luan")
-				}
-				chs[cnum] = make(chan int)
-				go UZip(filepath.Join(dirAbs, fileInfo.Name()), chs[cnum])
-				if i == len(fileInfos)-1 {
-					for i := 0; i <= cnum; i++ {
-						<-chs[i]
-					}
-					for _, ch := range chs {
-						close(ch)
-					}
-				}
-				cnum += 1
-
+		if cnum == CHANNUM {
+			for _, ch := range chs {
+				<-ch
+			}
+			cnum = 0
+			fmt.Println("One luan")
+		}
+		go UZip(filepath.Join(dirAbs, fileInfo.Name()), chs[cnum])
+		if i == len(fileInfos)-1 {
+			for i := 0; i <= cnum; i++ {
+				<-chs[i]
+			}
+			for _, ch := range chs {
+				close(ch)
 			}
 		}
+		cnum += 1
+
 	}
 }
 

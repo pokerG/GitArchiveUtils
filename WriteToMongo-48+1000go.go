@@ -19,7 +19,7 @@ import (
 
 const BUFSIZE int = 40000
 const CHANNUM int = 48
-const DCHANNUM int = 6000
+const DCHANNUM int = 1000
 
 var chs []chan int
 var cnum int
@@ -31,7 +31,7 @@ func main() {
 
 		t := time.Now()
 
-		chs = make([]chan int, CHANNUM+DCHANNUM)
+		chs = make([]chan int, CHANNUM)
 		cnum = 0
 		for i, _ := range chs {
 			chs[i] = make(chan int)
@@ -53,7 +53,7 @@ func Tree(dirname string) {
 
 	for i, fileInfo := range fileInfos {
 		if cnum == CHANNUM {
-			for _, ch := range chs[:CHANNUM] {
+			for _, ch := range chs {
 				<-ch
 			}
 			cnum = 0
@@ -63,6 +63,9 @@ func Tree(dirname string) {
 		if i == len(fileInfos)-1 {
 			for i := 0; i <= cnum; i++ {
 				<-chs[i]
+			}
+			for _, ch := range chs {
+				close(ch)
 			}
 		}
 		cnum += 1
@@ -81,26 +84,18 @@ func UZip(fpath string, ch chan int) {
 	handleError(err)
 
 	buf := make([]byte, BUFSIZE)
-
 	var data []byte
-
 	var num int = 0
 
-	t := time.Now()
 	for {
-
 		n, err := gr.Read(buf)
-		//fmt.Println(n)
-		//fmt.Println(buf)
 		data = append(data, buf[:n]...)
-
 		if err == io.EOF {
 			break
 		}
 		num += n
 		handleError(err)
 	}
-	fmt.Println("Read file:", time.Since(t))
 
 	WriteToMongo(fr.Name(), data, ch)
 }
@@ -109,26 +104,26 @@ func WriteToMongo(fname string, data []byte, ch chan int) {
 	session, err := mgo.Dial("localhost:27017")
 	handleError(err)
 	defer session.Close()
-	//fmt.Println(data)
 	session.SetMode(mgo.Monotonic, true)
 
-	t := time.Now()
 	reg, err := regexp.Compile(`[{].*[}][\n]`)
-	fmt.Println("regexp :", time.Since(t))
 	handleError(err)
 
 	c := session.DB("testGoBig").C("Event")
 	sdata := reg.FindAllString(string(data), -1)
 
-	t = time.Now()
+	dchs := make([]chan int, DCHANNUM)
+	dcnum := 0
 
 	for i, s := range sdata {
 		if dcnum == DCHANNUM {
-			for _, dch := range chs[CHANNUM:] {
+			for _, dch := range dchs {
 				<-dch
 			}
 			dcnum = 0
+			fmt.Println("One luan")
 		}
+		dchs[dcnum] = make(chan int)
 		go func(s string, ch chan int) {
 			var inter interface{}
 
@@ -136,23 +131,21 @@ func WriteToMongo(fname string, data []byte, ch chan int) {
 			handleError(err)
 			err = c.Insert(inter)
 			ch <- 1
-		}(s, chs[CHANNUM+dcnum])
+		}(s, dchs[dcnum])
 		if i == len(sdata)-1 {
 			for i := 0; i <= dcnum; i++ {
-				<-chs[CHANNUM+i]
+				<-dchs[i]
+			}
+			for _, dch := range dchs {
+				close(dch)
 			}
 		}
 		dcnum += 1
-
 	}
-
-	fmt.Println("Write db:", time.Since(t))
-
 	lock := &sync.Mutex{}
 	lock.Lock()
 	fmt.Println(fname)
 	fmt.Println(len(sdata))
-	//atomic.AddInt32(&currentNum, -1)
 	handleError(err)
 	ch <- 1
 	lock.Unlock()
