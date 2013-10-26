@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"flag"
 	"sync"
 	//"sync/atomic"
 	"time"
@@ -18,25 +19,35 @@ import (
 )
 
 const BUFSIZE int = 40000
-const CHANNUM int = 24
-const NUMINSERT int = 7000
+var CHANNUM int 
+var NUMINSERT int 
+
 var chs []chan int
 var cnum int
 var dcnum int
 
 func main() {
-	if len(os.Args) > 1 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
-
-		t := time.Now()
-
+		cn := flag.Int("c",24,"number of channel")
+		in := flag.Int("i",7000,"number of insert")
+		flag.Parse()
+		CHANNUM = *cn
+		NUMINSERT = *in
+		
+		args := flag.Args()
+		if len(args) > 0{
+			t := time.Now()
+			fmt.Println(CHANNUM,NUMINSERT)
 		chs = make([]chan int, CHANNUM)
 		cnum = 0
 		for i, _ := range chs {
 			chs[i] = make(chan int)
 		}
-		Tree(os.Args[1])
+		Tree(args[0])
 		fmt.Println("total time :", time.Since(t))
+
+	
+		
 
 	} else {
 		fmt.Println("Please input the Dir or file path")
@@ -57,6 +68,8 @@ func Tree(dirname string) {
 			}
 			cnum = 0
 			fmt.Println("One luan")
+			time.Sleep(time.Second * 5)
+			runtime.Gosched()
 		}
 		go UZip(filepath.Join(dirAbs, fileInfo.Name()), chs[cnum])
 		if i == len(fileInfos)-1 {
@@ -97,7 +110,7 @@ func UZip(fpath string, ch chan int) {
 }
 
 func WriteToMongo(fname string, data []byte, ch chan int) {
-	session, err := mgo.Dial("localhost:27017")
+	session, err := mgo.Dial("172.16.0.1:27017")
 	handleError(err)
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
